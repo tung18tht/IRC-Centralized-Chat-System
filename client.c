@@ -31,6 +31,36 @@ void *input_handler() {
   }
 }
 
+void *network_handler() {
+  char message[1024];
+  while(1){
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(sockfd, &set);
+    FD_SET(pipefds[0], &set);
+
+    select(sockfd>pipefds[0] ? sockfd+1:pipefds[0]+1, &set, NULL, NULL, NULL);
+
+    if (FD_ISSET(sockfd, &set)) {
+      if(read(sockfd, message, sizeof(message)) > 0) {
+        printf("\n%s\nYou: ", message);
+        fflush(stdout);
+      } else {
+        printf("\nServer closed\n");
+        cleanup_and_exit(1);
+      }
+    }
+    
+    if (FD_ISSET(pipefds[0], &set)) {
+      if(read(pipefds[0], message, sizeof(message)) > 0) {
+        write(sockfd, message, sizeof(message));
+      } else {
+        cleanup_and_exit(1);
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   if(argc == 2) {
     host = gethostbyname(argv[1]);
@@ -74,4 +104,9 @@ int main(int argc, char **argv) {
 
   pthread_t input_handler_thread;
   pthread_create(&input_handler_thread, NULL, input_handler, NULL);
+  
+  pthread_t network_handler_thread;
+  pthread_create(&network_handler_thread, NULL, network_handler, NULL);
+  
+  pthread_join(network_handler_thread);
 }
