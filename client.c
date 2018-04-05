@@ -17,21 +17,23 @@ int main(int argc, char **argv) {
   if(argc == 2) {
     host = gethostbyname(argv[1]);
   } else {
-    printf("Enter your domain: ");
+    printf("Enter your server domain: ");
     char domain[100];
     scanf("%s", domain);
     host = gethostbyname(domain);
   }
 
   if (host == NULL) {
-    printf("Unknow host\n");
-  } else {
-    addr = host->h_addr_list[0];
-    printf("%s\n", inet_ntoa(*addr));
+    printf("Unknown host\n");
+    return 1;
   }
+
+  addr = host->h_addr_list[0];
+  printf("%s\n", inet_ntoa(*addr));
 
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket\n");
+    return 1;
   }
 
   memset(&saddr, 0, sizeof(saddr));
@@ -41,9 +43,10 @@ int main(int argc, char **argv) {
 
   if (connect(sockfd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
     printf("Cannot connect\n");
-  } else {
-    printf("Connect success\n");
+    return 1;
   }
+  
+  printf("Connect success\n");
 
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
