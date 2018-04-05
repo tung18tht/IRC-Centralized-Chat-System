@@ -57,6 +57,8 @@ int main() {
     return 1;
   }
 
+  printf("Server created, started listening for connections...\n");
+
   pthread_t write_to_client_thread;
   pthread_create(&write_to_client_thread, NULL, write_to_client, NULL);
 
