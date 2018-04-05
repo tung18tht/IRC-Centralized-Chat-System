@@ -6,14 +6,32 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-int main(int argc, char **argv) {
-  struct sockaddr_in saddr;
-  struct in_addr *addr;
-  struct hostent *host;
-  int sockfd, fl;
-  unsigned short port = 8784;
-  char message[256];
+struct sockaddr_in saddr;
+struct in_addr *addr;
+struct hostent *host;
+int sockfd, fl;
+unsigned short port = 8784;
 
+void *input_handler() {
+  char message[1024];
+  while(1) {
+    printf("You: ");
+    fgets(message, sizeof(message), stdin);
+    if (strlen(message) == 1) {
+      continue;
+    }
+    if ((strlen(message) > 0) && (message[strlen (message) - 1] == '\n')) {
+      message[strlen (message) - 1] = '\0';
+    }
+    if (strcmp(message, "/quit") == 0) {
+      printf("Program exit...\n");
+      cleanup_and_exit(0);
+    }
+    write(pipefds[1], message, sizeof(message));
+  }
+}
+
+int main(int argc, char **argv) {
   if(argc == 2) {
     host = gethostbyname(argv[1]);
   } else {
@@ -54,13 +72,6 @@ int main(int argc, char **argv) {
   fl |= O_NONBLOCK;
   fcntl(sockfd, F_SETFL, fl);
 
-  while(1) {
-    printf("Client: ");
-    scanf("%s", message);
-    write(sockfd, message, sizeof(message));
-
-    if(read(sockfd, message, sizeof(message)) > 0) {
-      printf("Server: %s\n", message);
-    }
-  }
+  pthread_t input_handler_thread;
+  pthread_create(&input_handler_thread, NULL, input_handler, NULL);
 }
