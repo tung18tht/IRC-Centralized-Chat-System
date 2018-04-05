@@ -5,11 +5,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/select.h>
+#include <pthread.h>
 
 struct sockaddr_in saddr;
 struct in_addr *addr;
 struct hostent *host;
-int sockfd, fl;
+int sockfd, fl, pipefds[2];
 unsigned short port = 8784;
 
 void *input_handler() {
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
     printf("Unknown host\n");
     return 1;
   }
-
+  
   addr = host->h_addr_list[0];
   printf("%s\n", inet_ntoa(*addr));
 
@@ -101,7 +103,9 @@ int main(int argc, char **argv) {
   fl = fcntl(sockfd, F_GETFL, 0);
   fl |= O_NONBLOCK;
   fcntl(sockfd, F_SETFL, fl);
-
+  
+  pipe(pipefds);
+  
   pthread_t input_handler_thread;
   pthread_create(&input_handler_thread, NULL, input_handler, NULL);
   
