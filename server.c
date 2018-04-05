@@ -30,6 +30,7 @@ int main() {
 
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket\n");
+    return 1;
   }
 
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
@@ -45,10 +46,12 @@ int main() {
 
   if (bind(sockfd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
     printf("Error binding\n");
+    return 1;
   }
 
   if (listen(sockfd, 5) < 0) {
     printf("Error listening\n");
+    return 1;
   }
 
   pthread_t write_to_client_thread;
