@@ -85,6 +85,7 @@ int main() {
       for (int i=0; i<100; i++) {
         if (clientfds[i] == 0) {
           clientfds[i] = clientfd;
+          printf("Client %d connected\n", clientfds[i]);
           break;
         }
       }
