@@ -10,12 +10,15 @@
 int sockfd, clen, clientfd, clientfds[100], fl;
 struct sockaddr_in saddr, caddr;
 unsigned short port = 8784;
-char message[256];
+char message[1024];
 
 void *write_to_client() {
   while(1) {
     printf("Server: ");
-    scanf("%s", message);
+    fgets(message, 1024, stdin);
+    if ((strlen(message) > 0) && (message[strlen (message) - 1] == '\n')) {
+      message[strlen (message) - 1] = '\0';
+    }
 
     for(int i=0; i<100; i++) {
       if (clientfds[i] > 0) {
@@ -49,7 +52,7 @@ int main() {
     return 1;
   }
 
-  if (listen(sockfd, 5) < 0) {
+  if (listen(sockfd, 10) < 0) {
     printf("Error listening\n");
     return 1;
   }
@@ -66,9 +69,9 @@ int main() {
     for(int i=0; i<100; i++) {
       if (clientfds[i] > 0) {
         FD_SET(clientfds[i], &set);
-      }
-      if (clientfds[i] > maxfd) {
-        maxfd = clientfds[i];
+        if (clientfds[i] > maxfd) {
+          maxfd = clientfds[i];
+        }
       }
     }
 
