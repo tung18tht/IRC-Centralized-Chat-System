@@ -14,6 +14,14 @@ struct hostent *host;
 int sockfd, fl, pipefds[2];
 unsigned short port = 8784;
 
+void cleanup_and_exit(int status){
+  shutdown(sockfd, SHUT_RDWR);
+  close(sockfd);
+  close(pipefds[0]);
+  close(pipefds[1]);
+  exit(status);
+}
+
 void *input_handler() {
   char message[1024];
   while(1) {
