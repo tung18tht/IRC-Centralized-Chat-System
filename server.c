@@ -159,15 +159,22 @@ int main() {
           return 1;
         }
         printf("Message from Client %d: %s\n", i, message);
+        
         if(strcmp(message, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
           printf("Client %d disconnected\n", i);
-          continue;
-        }
-        for (int j=0; j<MAX_CLIENT; j++) {
-          if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
-            write(parent_to_child_pipe[j][1], message, sizeof(message));
+        } else if (strcmp(message, "/id") == 0) {
+          sprintf(message, "Your ID is: %d", i);
+          write(parent_to_child_pipe[i][1], message, sizeof(message));
+        } else if (strcmp(message, "/help") == 0) {
+          sprintf(message, "...", i);
+          write(parent_to_child_pipe[i][1], message, sizeof(message));
+        } else {
+          for (int j=0; j<MAX_CLIENT; j++) {
+            if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
+              write(parent_to_child_pipe[j][1], message, sizeof(message));
+            }
           }
         }
       }
