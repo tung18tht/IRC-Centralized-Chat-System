@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #define MAX_CLIENT 100
+#define BUFFER_SIZE 1024
 
 int main() {
   int sockfd, fl, clen, clientfd;
@@ -42,7 +43,7 @@ int main() {
     return 1;
   }
 
-  printf("Server created, started listening for connections...\n");
+  printf("Server created, listening for connections...\n");
 
   while(1) {
     fd_set set;
@@ -74,6 +75,7 @@ int main() {
         if ((parent_to_child_pipe[i][0] == 0) && (parent_to_child_pipe[i][1] == 0) && (child_to_parent_pipe[i][0] == 0) && (child_to_parent_pipe[i][1] == 0)){
           pipe (parent_to_child_pipe[i]);
           pipe (child_to_parent_pipe[i]);
+          printf("Client %d connected\n", i);
           break;
         }
       }
@@ -96,15 +98,28 @@ int main() {
             select(maxfd + 1, &set, NULL, NULL, NULL);
             
             if (FD_ISSET(parent_to_child_pipe[i][0], &set)) {
-              char message[1024];
-              read(parent_to_child_pipe[i][0], message, sizeof(message));
-              write(clientfd, message, sizeof(message));
+              char message[BUFFER_SIZE];
+              if(read(parent_to_child_pipe[i][0], message, sizeof(message)) > 0) {
+                write(clientfd, message, sizeof(message));
+              } else {
+                return 1;
+              }
             }
             
             if(FD_ISSET(clientfd, &set)){
-              char message[1024];
-              read(clientfd, message, sizeof(message));
-              write(child_to_parent_pipe[i][1], message, sizeof(message));
+              char message[BUFFER_SIZE];
+              if(read(clientfd, message, sizeof(message)) > 0) {
+                write(child_to_parent_pipe[i][1], message, sizeof(message));
+              } else {
+                sprintf(message, "/dc");
+                write(child_to_parent_pipe[i][1], message, sizeof(message));
+                shutdown(clientfd, SHUT_RDWR);
+                close(clientfd);
+                close(parent_to_child_pipe[i][0]);
+                close(child_to_parent_pipe[i][1]);
+                printf("Client %d disconnected\n", i);
+                return 1;
+              }
             }
           }
           break;
@@ -116,8 +131,20 @@ int main() {
     
     for (int i=0; i<MAX_CLIENT; i++) {
       if (child_to_parent_pipe[i][0] > 0 && FD_ISSET(child_to_parent_pipe[i][0], &set)) {
-        char message[1024];
-        read(child_to_parent_pipe[i][0], message, sizeof(message));
+        char message[BUFFER_SIZE];
+        if(read(child_to_parent_pipe[i][0], message, sizeof(message)) < 0){
+          return 1;
+        }
+        char temp[3];
+        strncpy(temp, message, 3);
+        if(strcmp(temp, "/dc") == 0) {
+          close(parent_to_child_pipe[i][1]);
+          close(child_to_parent_pipe[i][0]);
+          child_to_parent_pipe[i][0] = 0;
+          child_to_parent_pipe[i][1] = 0;
+          parent_to_child_pipe[i][0] = 0;
+          parent_to_child_pipe[i][1] = 0;
+        }
         for (int j=0; j<MAX_CLIENT; j++) {
           if (j == i) {
             continue;
