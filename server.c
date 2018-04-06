@@ -7,7 +7,7 @@
 #include <sys/select.h>
 #include <pthread.h>
 
-#define MAX_CLIENT 3
+#define MAX_CLIENT 100
 #define BUFFER_SIZE 1024
 
 int sockfd, fl, clen, clientfd, count_client = 0;
@@ -158,6 +158,7 @@ int main() {
         if(read(child_to_parent_pipe[i][0], message, sizeof(message)) < 0){
           return 1;
         }
+        printf("Message from Client %d: %s\n", i, message);
         if(strcmp(message, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
@@ -165,10 +166,7 @@ int main() {
           continue;
         }
         for (int j=0; j<MAX_CLIENT; j++) {
-          if (j == i) {
-            continue;
-          }
-          if(parent_to_child_pipe[j][1] > 0) {
+          if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
             write(parent_to_child_pipe[j][1], message, sizeof(message));
           }
         }
