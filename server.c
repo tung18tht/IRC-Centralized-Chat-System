@@ -7,14 +7,14 @@
 #include <sys/select.h>
 #include <pthread.h>
 
+#define MAX_CLIENT 100
+
 int main() {
-  int sockfd, fl, clen, clientfd, client_pipe_fds[100][2];
+  int sockfd, fl, clen, clientfd;
+  int client_to_server_pipe[MAX_CLIENT][2] = {0};
+  int server_to_client_pipe[MAX_CLIENT][2] = {0};
   struct sockaddr_in saddr, caddr;
   unsigned short port = 8784;
-  
-  for (int i = 0; i < 100; i++) {
-    client_pipe_fds[i][0] = client_pipe_fds[i][1] = 0;
-  }
   
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket!\n");
@@ -48,17 +48,22 @@ int main() {
     fd_set set;
     FD_ZERO(&set);
     FD_SET(sockfd, &set);
-    FD_SET(0, &set);
     
     select(sockfd+1, &set, NULL, NULL, NULL);
 
     if (FD_ISSET(sockfd, &set)) {
       clen=sizeof(caddr);
       clientfd = accept(sockfd, (struct sockaddr *) &caddr, &clen);
+      
+      fl = fcntl(clientfd, F_GETFL, 0);
+      fl |= O_NONBLOCK;
+      fcntl(sockfd, F_SETFL, fl);
+      
       int i;
-      for (i = 0; i < 100; i++) {
-        if ((client_pipe_fds[i][0] == 0) && (client_pipe_fds[i][1] == 0)){
-          pipe (client_pipe_fds[i]);
+      for (i = 0; i < MAX_CLIENT; i++) {
+        if ((server_to_client_pipe[i][0] == 0) && (server_to_client_pipe[i][1] == 0) && (client_to_server_pipe[i][0] == 0) && (client_to_server_pipe[i][1] == 0)){
+          pipe (server_to_client_pipe[i]);
+          pipe (client_to_server_pipe[i]);
           break;
         }
       }
@@ -68,40 +73,22 @@ int main() {
           printf("Cannot create process!\n");
           return 1;
         case 0:
-          close(client_pipe_fds[i][1]);
-          fflush(stdout);
+          close(server_to_client_pipe[i][1]);
+          close(client_to_server_pipe[i][0]);
           while(1) {
             fd_set set;
             FD_ZERO(&set);
-            FD_SET(client_pipe_fds[i][0], &set);
+            FD_SET(server_to_client_pipe[i][0], &set);
             
-            select(client_pipe_fds[i][0]+1, &set, NULL, NULL, NULL);
+            select(server_to_client_pipe[i][0]+1, &set, NULL, NULL, NULL);
             
-            if (FD_ISSET(client_pipe_fds[i][0], &set)) {
+            if (FD_ISSET(server_to_client_pipe[i][0], &set)) {
               char message[1024];
-              read(client_pipe_fds[i][0], message, sizeof(message));
+              read(server_to_client_pipe[i][0], message, sizeof(message));
               
               printf("Message received: %s\n", message);
             }
           }
-          break;
-        default:
-          // close(client_pipe_fds[i][0]);
-          break;
-      }
-    }
-    
-    if (FD_ISSET(0, &set)) {
-      char message[1024];
-      fgets(message, 1024, stdin);
-      if ((strlen(message) > 0) && (message[strlen (message) - 1] == '\n')) {
-        message[strlen (message) - 1] = '\0';
-      }
-  
-      for(int i=0; i<100; i++) {
-        if ((client_pipe_fds[i][0] != 0) && (client_pipe_fds[i][1] != 0)){
-          write(client_pipe_fds[i][1], message, sizeof(message));
-        }
       }
     }
   }
