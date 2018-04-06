@@ -48,9 +48,18 @@ int main() {
     fd_set set;
     FD_ZERO(&set);
     FD_SET(sockfd, &set);
-    FD_SET(0, &set);
     
-    select(sockfd+1, &set, NULL, NULL, NULL);
+    int maxfd = sockfd;
+    for(int i=0; i<MAX_CLIENT; i++) {
+      if (child_to_parent_pipe[i][0] > 0) {
+        FD_SET(child_to_parent_pipe[i][0], &set);
+        if (child_to_parent_pipe[i][0] > maxfd) {
+          maxfd = child_to_parent_pipe[i][0];
+        }
+      }
+    }
+    
+    select(maxfd+1, &set, NULL, NULL, NULL);
 
     if (FD_ISSET(sockfd, &set)) {
       clen=sizeof(caddr);
@@ -102,6 +111,21 @@ int main() {
         default:
           close(parent_to_child_pipe[i][0]);
           close(child_to_parent_pipe[i][1]);
+      }
+    }
+    
+    for (int i=0; i<MAX_CLIENT; i++) {
+      if (child_to_parent_pipe[i][0] > 0 && FD_ISSET(child_to_parent_pipe[i][0], &set)) {
+        char message[1024];
+        read(child_to_parent_pipe[i][0], message, sizeof(message));
+        for (int j=0; j<MAX_CLIENT; j++) {
+          if (j == i) {
+            continue;
+          }
+          if(parent_to_child_pipe[j][1] > 0) {
+            write(parent_to_child_pipe[j][1], message, sizeof(message));
+          }
+        }
       }
     }
   }
