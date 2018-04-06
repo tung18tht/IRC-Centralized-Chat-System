@@ -7,10 +7,10 @@
 #include <sys/select.h>
 #include <pthread.h>
 
-#define MAX_CLIENT 100
+#define MAX_CLIENT 3
 #define BUFFER_SIZE 1024
 
-int sockfd, fl, clen, clientfd;
+int sockfd, fl, clen, clientfd, count_client = 0;
 int child_to_parent_pipe[MAX_CLIENT][2] = {0};
 int parent_to_child_pipe[MAX_CLIENT][2] = {0};
 struct sockaddr_in saddr, caddr;
@@ -84,66 +84,71 @@ int main() {
       fl |= O_NONBLOCK;
       fcntl(sockfd, F_SETFL, fl);
       
-      int i;
-      for (i = 0; i < MAX_CLIENT; i++) {
-        if ((parent_to_child_pipe[i][0] == 0) && (parent_to_child_pipe[i][1] == 0) && (child_to_parent_pipe[i][0] == 0) && (child_to_parent_pipe[i][1] == 0)){
-          pipe (parent_to_child_pipe[i]);
-          pipe (child_to_parent_pipe[i]);
-          printf("Client %d connected\n", i);
-          break;
+      if(count_client == MAX_CLIENT) {
+        disconnect(clientfd);
+      } else {  
+        int i;
+        for (i = 0; i < MAX_CLIENT; i++) {
+          if ((parent_to_child_pipe[i][0] == 0) && (parent_to_child_pipe[i][1] == 0) && (child_to_parent_pipe[i][0] == 0) && (child_to_parent_pipe[i][1] == 0)){
+            pipe (parent_to_child_pipe[i]);
+            pipe (child_to_parent_pipe[i]);
+            count_client++;
+            printf("Client %d connected\n", i);
+            break;
+          }
         }
-      }
-      
-      switch(fork()) {
-        case -1:
-          printf("Cannot create process!\n");
-          return 1;
-        case 0:
-          close(parent_to_child_pipe[i][1]);
-          close(child_to_parent_pipe[i][0]);
-          while(1) {
-            fd_set set;
-            FD_ZERO(&set);
-            FD_SET(parent_to_child_pipe[i][0], &set);
-            FD_SET(clientfd, &set);
-            
-            int maxfd = clientfd > parent_to_child_pipe[i][0] ? clientfd : parent_to_child_pipe[i][0];
-            
-            select(maxfd + 1, &set, NULL, NULL, NULL);
-            
-            if (FD_ISSET(parent_to_child_pipe[i][0], &set)) {
-              char message[BUFFER_SIZE];
-              if(read(parent_to_child_pipe[i][0], message, sizeof(message)) > 0) {
-                write(clientfd, message, sizeof(message));
-              } else {
-                return 1;
+        
+        switch(fork()) {
+          case -1:
+            printf("Cannot create process!\n");
+            return 1;
+          case 0:
+            close(parent_to_child_pipe[i][1]);
+            close(child_to_parent_pipe[i][0]);
+            while(1) {
+              fd_set set;
+              FD_ZERO(&set);
+              FD_SET(parent_to_child_pipe[i][0], &set);
+              FD_SET(clientfd, &set);
+              
+              int maxfd = clientfd > parent_to_child_pipe[i][0] ? clientfd : parent_to_child_pipe[i][0];
+              
+              select(maxfd + 1, &set, NULL, NULL, NULL);
+              
+              if (FD_ISSET(parent_to_child_pipe[i][0], &set)) {
+                char message[BUFFER_SIZE];
+                if(read(parent_to_child_pipe[i][0], message, sizeof(message)) > 0) {
+                  write(clientfd, message, sizeof(message));
+                } else {
+                  return 1;
+                }
               }
-            }
-            
-            if(FD_ISSET(clientfd, &set)){
-              char message[BUFFER_SIZE];
-              if(read(clientfd, message, sizeof(message)) > 0) {
-                write(child_to_parent_pipe[i][1], message, sizeof(message));
-                if(strcmp(message, "/quit") == 0) {
+              
+              if(FD_ISSET(clientfd, &set)){
+                char message[BUFFER_SIZE];
+                if(read(clientfd, message, sizeof(message)) > 0) {
+                  write(child_to_parent_pipe[i][1], message, sizeof(message));
+                  if(strcmp(message, "/quit") == 0) {
+                    disconnect(clientfd);
+                    close(parent_to_child_pipe[i][0]);
+                    close(child_to_parent_pipe[i][1]);
+                    return 0;
+                  }
+                } else {
+                  sprintf(message, "/quit");
+                  write(child_to_parent_pipe[i][1], message, sizeof(message));
                   disconnect(clientfd);
                   close(parent_to_child_pipe[i][0]);
                   close(child_to_parent_pipe[i][1]);
-                  return 0;
+                  return 1;
                 }
-              } else {
-                sprintf(message, "/quit");
-                write(child_to_parent_pipe[i][1], message, sizeof(message));
-                disconnect(clientfd);
-                close(parent_to_child_pipe[i][0]);
-                close(child_to_parent_pipe[i][1]);
-                return 1;
               }
             }
-          }
-          break;
-        default:
-          close(parent_to_child_pipe[i][0]);
-          close(child_to_parent_pipe[i][1]);
+            break;
+          default:
+            close(parent_to_child_pipe[i][0]);
+            close(child_to_parent_pipe[i][1]);
+        }
       }
     }
     
@@ -155,6 +160,7 @@ int main() {
         }
         if(strcmp(message, "/quit") == 0) {
           clean_pipe(i);
+          count_client--;
           printf("Client %d disconnected\n", i);
           continue;
         }
