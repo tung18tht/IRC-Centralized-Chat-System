@@ -10,13 +10,27 @@
 #define MAX_CLIENT 100
 #define BUFFER_SIZE 1024
 
+int sockfd, fl, clen, clientfd;
+int child_to_parent_pipe[MAX_CLIENT][2] = {0};
+int parent_to_child_pipe[MAX_CLIENT][2] = {0};
+struct sockaddr_in saddr, caddr;
+unsigned short port = 8784;
+
+void disconnect(int socket) {
+  shutdown(socket, SHUT_RDWR);
+  close(socket);
+}
+
+void clean_pipe(int client) {
+  close(parent_to_child_pipe[client][1]);
+  close(child_to_parent_pipe[client][0]);
+  child_to_parent_pipe[client][0] = 0;
+  child_to_parent_pipe[client][1] = 0;
+  parent_to_child_pipe[client][0] = 0;
+  parent_to_child_pipe[client][1] = 0;
+}
+
 int main() {
-  int sockfd, fl, clen, clientfd;
-  int child_to_parent_pipe[MAX_CLIENT][2] = {0};
-  int parent_to_child_pipe[MAX_CLIENT][2] = {0};
-  struct sockaddr_in saddr, caddr;
-  unsigned short port = 8784;
-  
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket!\n");
     return 1;
@@ -110,14 +124,18 @@ int main() {
               char message[BUFFER_SIZE];
               if(read(clientfd, message, sizeof(message)) > 0) {
                 write(child_to_parent_pipe[i][1], message, sizeof(message));
+                if(strcmp(message, "/quit") == 0) {
+                  disconnect(clientfd);
+                  close(parent_to_child_pipe[i][0]);
+                  close(child_to_parent_pipe[i][1]);
+                  return 0;
+                }
               } else {
-                sprintf(message, "/dc");
+                sprintf(message, "/quit");
                 write(child_to_parent_pipe[i][1], message, sizeof(message));
-                shutdown(clientfd, SHUT_RDWR);
-                close(clientfd);
+                disconnect(clientfd);
                 close(parent_to_child_pipe[i][0]);
                 close(child_to_parent_pipe[i][1]);
-                printf("Client %d disconnected\n", i);
                 return 1;
               }
             }
@@ -135,15 +153,10 @@ int main() {
         if(read(child_to_parent_pipe[i][0], message, sizeof(message)) < 0){
           return 1;
         }
-        char temp[3];
-        strncpy(temp, message, 3);
-        if(strcmp(temp, "/dc") == 0) {
-          close(parent_to_child_pipe[i][1]);
-          close(child_to_parent_pipe[i][0]);
-          child_to_parent_pipe[i][0] = 0;
-          child_to_parent_pipe[i][1] = 0;
-          parent_to_child_pipe[i][0] = 0;
-          parent_to_child_pipe[i][1] = 0;
+        if(strcmp(message, "/quit") == 0) {
+          clean_pipe(i);
+          printf("Client %d disconnected\n", i);
+          continue;
         }
         for (int j=0; j<MAX_CLIENT; j++) {
           if (j == i) {

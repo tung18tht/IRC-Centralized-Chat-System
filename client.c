@@ -8,6 +8,8 @@
 #include <sys/select.h>
 #include <pthread.h>
 
+#define BUFFER_SIZE 1024
+
 struct sockaddr_in saddr;
 struct in_addr *addr;
 struct hostent *host;
@@ -23,7 +25,7 @@ void cleanup_and_exit(int status){
 }
 
 void *input_handler() {
-  char message[1024];
+  char message[BUFFER_SIZE];
   while(1) {
     printf("You: ");
     fgets(message, sizeof(message), stdin);
@@ -34,6 +36,7 @@ void *input_handler() {
       message[strlen (message) - 1] = '\0';
     }
     if (strcmp(message, "/quit") == 0) {
+      write(pipefds[1], message, sizeof(message));
       printf("Program exit...\n");
       cleanup_and_exit(0);
     }
@@ -42,7 +45,7 @@ void *input_handler() {
 }
 
 void *network_handler() {
-  char message[1024];
+  char message[BUFFER_SIZE];
   while(1){
     fd_set set;
     FD_ZERO(&set);
@@ -87,7 +90,6 @@ int main(int argc, char **argv) {
   }
   
   addr = host->h_addr_list[0];
-  printf("%s\n", inet_ntoa(*addr));
 
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket!\n");
