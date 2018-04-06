@@ -56,8 +56,8 @@ void *network_handler() {
         printf("\n%s\nYou: ", message);
         fflush(stdout);
       } else {
-        printf("\nServer closed\n");
-        cleanup_and_exit(1);
+        printf("\nConnection closed!\n");
+        cleanup_and_exit(0);
       }
     }
     
@@ -82,16 +82,16 @@ int main(int argc, char **argv) {
   }
 
   if (host == NULL) {
-    printf("Unknown host\n");
-    return 1;
+    printf("Unknown host!\n");
+    cleanup_and_exit(1);
   }
   
   addr = host->h_addr_list[0];
   printf("%s\n", inet_ntoa(*addr));
 
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    printf("Error creating socket\n");
-    return 1;
+    printf("Error creating socket!\n");
+    cleanup_and_exit(1);
   }
 
   memset(&saddr, 0, sizeof(saddr));
@@ -100,11 +100,11 @@ int main(int argc, char **argv) {
   saddr.sin_port = htons(port);
 
   if (connect(sockfd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-    printf("Cannot connect\n");
-    return 1;
+    printf("Cannot connect!\n");
+    cleanup_and_exit(1);
   }
   
-  printf("Connect success\n");
+  printf("Connect success, program started...\n");
 
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
@@ -120,5 +120,5 @@ int main(int argc, char **argv) {
   pthread_t network_handler_thread;
   pthread_create(&network_handler_thread, NULL, network_handler, NULL);
   
-  pthread_join(network_handler_thread);
+  pthread_join(network_handler_thread, NULL);
 }
