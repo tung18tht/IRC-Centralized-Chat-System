@@ -27,7 +27,7 @@ void cleanup_and_exit(int status){
 void *input_handler() {
   char message[BUFFER_SIZE];
   while(1) {
-    printf("You> ");
+    printf("You: ");
     fgets(message, sizeof(message), stdin);
     if (strlen(message) == 1) {
       continue;
@@ -56,7 +56,7 @@ void *network_handler() {
 
     if (FD_ISSET(sockfd, &set)) {
       if(read(sockfd, message, sizeof(message)) > 0) {
-        printf("\n%s\nYou> ", message);
+        printf("\n%s\nYou: ", message);
         fflush(stdout);
       } else {
         printf("\nConnection closed!\n");
@@ -78,9 +78,12 @@ int main(int argc, char **argv) {
   if(argc == 2) {
     host = gethostbyname(argv[1]);
   } else {
-    printf("Enter your server domain> ");
+    printf("Enter your server domain: ");
     char domain[100];
-    scanf("%s", domain);
+    fgets(domain, sizeof(domain), stdin);
+    if ((strlen(domain) > 0) && (domain[strlen (domain) - 1] == '\n')) {
+      domain[strlen (domain) - 1] = '\0';
+    }
     host = gethostbyname(domain);
   }
 

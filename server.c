@@ -30,6 +30,23 @@ void clean_pipe(int client) {
   parent_to_child_pipe[client][1] = 0;
 }
 
+char* get_help_message() {
+  return "\n"
+  "*****************************************************\n"
+  "*        Welcome to command-line IRC Program        *\n"
+  "*                                                   *\n"
+  "*                                                   *\n"
+  "* Following are some useful commands:               *\n"
+  "*                                                   *\n"
+  "*   /help               Show this message           *\n"
+  "*   /id                 Get your client id          *\n"
+  "*   /list               Show all connected clients  *\n"
+  "*   /pm [id] [message]  Send PM to a client         *\n"
+  "*   /quit               Exit the program            *\n"
+  "*                                                   *\n"
+  "*****************************************************\n";
+}
+
 int main() {
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket!\n");
@@ -105,6 +122,11 @@ int main() {
           case 0:
             close(parent_to_child_pipe[i][1]);
             close(child_to_parent_pipe[i][0]);
+            
+            char message[BUFFER_SIZE];
+            strcpy(message, get_help_message());
+            write(clientfd, message, sizeof(message));
+            
             while(1) {
               fd_set set;
               FD_ZERO(&set);
@@ -168,7 +190,7 @@ int main() {
           sprintf(message, "Your ID is: %d", i);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
         } else if (strcmp(message, "/help") == 0) {
-          sprintf(message, "...", i);
+          strcpy(message, get_help_message());
           write(parent_to_child_pipe[i][1], message, sizeof(message));
         } else {
           for (int j=0; j<MAX_CLIENT; j++) {
