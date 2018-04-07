@@ -192,6 +192,8 @@ int main() {
             fflush(stdout);
           }
         } else if (strcmp(first_token, "shutdown") == 0) {
+          broadcast("Server is shutting down in 3...2...1...");
+          sleep(3);
           for (int i = 0; i < MAX_CLIENT; i++) {
             if (clientfds[i] > 0) {
               disconnect(clientfds[i]);
