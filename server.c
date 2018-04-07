@@ -35,6 +35,8 @@ char* get_help_message() {
   "*****************************************************\n"
   "*        Welcome to command-line IRC Program        *\n"
   "*                                                   *\n"
+  "*    You are connected to the server, just type     *\n"
+  "*               your message to chat                *\n"
   "*                                                   *\n"
   "* Following are some useful commands:               *\n"
   "*                                                   *\n"
@@ -123,7 +125,7 @@ int main() {
             pipe (parent_to_child_pipe[i]);
             pipe (child_to_parent_pipe[i]);
             count_client++;
-            printf("Client %d connected (%d clients connected)\n", i, count_client);
+            printf("Client %d connected (currently %d clients connected)\n", i, count_client);
             break;
           }
         }
@@ -198,7 +200,7 @@ int main() {
         if(strcmp(message, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
-          printf("Client %d disconnected (%d clients connected)\n", i, count_client);
+          printf("Client %d disconnected (currently %d clients connected)\n", i, count_client);
         } else if (strcmp(message, "/id") == 0) {
           sprintf(message, "[Server] Your ID is: %d", i);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
@@ -209,9 +211,12 @@ int main() {
           get_list_message(i, message);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
         } else {
+          char msg_with_header[BUFFER_SIZE];
+          sprintf(msg_with_header, "Client %d: ", i);
+          strcat(msg_with_header, message);
           for (int j=0; j<MAX_CLIENT; j++) {
             if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
-              write(parent_to_child_pipe[j][1], message, sizeof(message));
+              write(parent_to_child_pipe[j][1], msg_with_header, sizeof(msg_with_header));
             }
           }
         }
