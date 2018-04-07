@@ -24,7 +24,7 @@ void disconnect(int socket) {
   close(socket);
 }
 
-void clean_pipe(int client) {
+void clean_pipe_and_fd(int client) {
   close(parent_to_child_pipe[client][1]);
   close(child_to_parent_pipe[client][0]);
   child_to_parent_pipe[client][0] = 0;
@@ -155,7 +155,14 @@ int main() {
         } else if (strcmp(first_token, "dc") == 0) {
 
         } else if (strcmp(first_token, "shutdown") == 0) {
-
+          for (int i = 0; i < MAX_CLIENT; i++) {
+            if (clientfds[i] > 0) {
+              disconnect(clientfds[i]);
+              clean_pipe_and_fd(i);
+            }
+          }
+          printf("All connections closed, shutting down server...\n");
+          return 0;
         } else {
 
         }
@@ -272,13 +279,13 @@ int main() {
               }
             } else {
               char msg_to_client[BUFFER_SIZE];
-              sprintf(msg_to_client, "[Server] Message didn't send. Cannot find client ");
+              sprintf(msg_to_client, "[Server] Message didn't send. Cannot find Client ");
               strcat(msg_to_client, dest_id_str);
               write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
             }
           }
         } else if(strcmp(first_token, "/quit") == 0) {
-          clean_pipe(i);
+          clean_pipe_and_fd(i);
           count_client--;
           printf("\nClient %d disconnected (currently %d clients connected)\n> ", i, count_client);
           fflush(stdout);
