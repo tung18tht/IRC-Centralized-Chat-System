@@ -11,8 +11,8 @@
 #define BUFFER_SIZE 1024
 
 int sockfd, fl, clen, clientfd, count_client = 0;
-int child_to_parent_pipe[MAX_CLIENT][2] = {0};
-int parent_to_child_pipe[MAX_CLIENT][2] = {0};
+int child_to_parent_pipe[MAX_CLIENT][2] = {{0}};
+int parent_to_child_pipe[MAX_CLIENT][2] = {{0}};
 struct sockaddr_in saddr, caddr;
 unsigned short port = 8784;
 
@@ -45,6 +45,19 @@ char* get_help_message() {
   "*   /quit               Exit the program            *\n"
   "*                                                   *\n"
   "*****************************************************\n";
+}
+
+void get_list_message(int called_client, char *message) {
+  sprintf(message, "[Server] Following is the list of connected clients:");
+  for (int i=0; i<MAX_CLIENT; i++) {
+    if (child_to_parent_pipe[i][0] > 0) {
+      if (called_client == i) {
+        sprintf(message, "%s\n       * Client %d  <-- YOU", message, i);
+      } else {
+        sprintf(message, "%s\n       * Client %d", message, i);
+      }
+    }
+  }
 }
 
 int main() {
@@ -110,7 +123,7 @@ int main() {
             pipe (parent_to_child_pipe[i]);
             pipe (child_to_parent_pipe[i]);
             count_client++;
-            printf("Client %d connected\n", i);
+            printf("Client %d connected (%d clients connected)\n", i, count_client);
             break;
           }
         }
@@ -126,7 +139,7 @@ int main() {
             char message[BUFFER_SIZE];
             strcpy(message, get_help_message());
             write(clientfd, message, sizeof(message));
-            
+
             while(1) {
               fd_set set;
               FD_ZERO(&set);
@@ -185,12 +198,15 @@ int main() {
         if(strcmp(message, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
-          printf("Client %d disconnected\n", i);
+          printf("Client %d disconnected (%d clients connected)\n", i, count_client);
         } else if (strcmp(message, "/id") == 0) {
-          sprintf(message, "Your ID is: %d", i);
+          sprintf(message, "[Server] Your ID is: %d", i);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
         } else if (strcmp(message, "/help") == 0) {
           strcpy(message, get_help_message());
+          write(parent_to_child_pipe[i][1], message, sizeof(message));
+        } else if (strcmp(message, "/list") == 0) {
+          get_list_message(i, message);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
         } else {
           for (int j=0; j<MAX_CLIENT; j++) {
