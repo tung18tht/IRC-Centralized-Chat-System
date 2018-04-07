@@ -197,27 +197,42 @@ int main() {
           return 1;
         }
         printf("Message from Client %d: %s\n", i, message);
-        
-        if(strcmp(message, "/quit") == 0) {
+
+        char *msg_copy;
+        strcpy(msg_copy, message);
+        char *first_token = strtok(msg_copy, " ");
+        if (strcmp(first_token, "/pm") == 0) {
+          char *check, *dest_id_str;
+          dest_id_str = strtok(NULL, " ");
+          if (dest_id_str != NULL) {
+            int dest_id = strtol(dest_id_str, &check, 10);
+            if ((*check == '\0') && (parent_to_child_pipe[dest_id][1] > 0)) {
+              char *content, msg_with_header[BUFFER_SIZE];
+              content = strtok(NULL, "");
+              if (content != NULL) {
+                sprintf(msg_with_header, "Client %d [PM]: ", i);
+                strcat(msg_with_header, content);
+                write(parent_to_child_pipe[dest_id][1], msg_with_header, sizeof(msg_with_header));
+              }
+            } else {
+              sprintf(message, "[Server] Message didn't send. Cannot find client ");
+              strcat(message, dest_id_str);
+              write(parent_to_child_pipe[i][1], message, sizeof(message));
+            }
+          }
+        } else if(strcmp(first_token, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
           printf("Client %d disconnected (currently %d clients connected)\n", i, count_client);
-        } else if (strcmp(message, "/id") == 0) {
+        } else if (strcmp(first_token, "/id") == 0) {
           sprintf(message, "[Server] Your ID is: %d", i);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
-        } else if (strcmp(message, "/help") == 0) {
+        } else if (strcmp(first_token, "/help") == 0) {
           strcpy(message, get_help_message());
           write(parent_to_child_pipe[i][1], message, sizeof(message));
-        } else if (strcmp(message, "/list") == 0) {
+        } else if (strcmp(first_token, "/list") == 0) {
           get_list_message(i, message);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
-        } else if (strcmp(strtok(message, " "), "/pm") == 0) {
-          char *content, msg_with_header[BUFFER_SIZE];
-          int dest_id = atoi(strtok(NULL, " "));
-          sprintf(msg_with_header, "Client %d [PM]: ", i);
-          content = strtok(NULL, "");
-          strcat(msg_with_header, content);
-          write(parent_to_child_pipe[dest_id][1], msg_with_header, sizeof(msg_with_header));
         } else {
           char msg_with_header[BUFFER_SIZE];
           sprintf(msg_with_header, "Client %d: ", i);
