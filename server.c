@@ -67,15 +67,19 @@ char* get_help_message() {
 }
 
 void get_list_message(int called_client, char *message) {
-  sprintf(message, "[Server] Following is the list of connected clients:");
-  for (int i=0; i<MAX_CLIENT; i++) {
-    if (clientfds[i] > 0) {
-      if (called_client == i) {
-        sprintf(message, "%s\n       * Client %d  <-- YOU", message, i);
-      } else {
-        sprintf(message, "%s\n       * Client %d", message, i);
+  if (count_client != 0) {
+    sprintf(message, "[Server] Following is the list of connected clients:");
+    for (int i=0; i<MAX_CLIENT; i++) {
+      if (clientfds[i] > 0) {
+        if (called_client == i) {
+          sprintf(message, "%s\n       * Client %d  <-- YOU", message, i);
+        } else {
+          sprintf(message, "%s\n       * Client %d", message, i);
+        }
       }
     }
+  } else {
+    sprintf(message, "[Server] Currently there are no connected clients.");
   }
 }
 
@@ -165,6 +169,9 @@ int main() {
             } else {
               printf("Cannot find Client %s\n> ", client_id_str);
             }
+            fflush(stdout);
+          } else {
+            printf("> ");
             fflush(stdout);
           }
         } else if (strcmp(first_token, "shutdown") == 0) {
