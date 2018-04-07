@@ -214,7 +214,7 @@ int main() {
         } else if (strcmp(strtok(message, " "), "/pm") == 0) {
           char *content, msg_with_header[BUFFER_SIZE];
           int dest_id = atoi(strtok(NULL, " "));
-          sprintf(msg_with_header, "Client %d [PM]: ", dest_id);
+          sprintf(msg_with_header, "Client %d [PM]: ", i);
           content = strtok(NULL, "");
           strcat(msg_with_header, content);
           write(parent_to_child_pipe[dest_id][1], msg_with_header, sizeof(msg_with_header));
