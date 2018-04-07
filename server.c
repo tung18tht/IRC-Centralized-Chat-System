@@ -83,6 +83,17 @@ void get_list_message(int called_client, char *message) {
   }
 }
 
+void broadcast(char *message) {
+  char msg_to_client[BUFFER_SIZE];
+  sprintf(msg_to_client, "[Server] ");
+  strcat(msg_to_client, message);
+  for (int i = 0; i < MAX_CLIENT; i++) {
+    if (clientfds[i] > 0) {
+      write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
+    }
+  }
+}
+
 int main() {
   if ((sockfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Error creating socket!\n");
@@ -155,7 +166,13 @@ int main() {
         } else if (strcmp(first_token, "pm") == 0) {
 
         } else if (strcmp(first_token, "broadcast") == 0) {
-
+          char *message;
+          message = strtok(NULL, "");
+          if (message != NULL) {
+            broadcast(message);
+          }
+          printf("> ");
+          fflush(stdout);
         } else if (strcmp(first_token, "dc") == 0) {
           char *check, *client_id_str;
           client_id_str = strtok(NULL, " ");
