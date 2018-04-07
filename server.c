@@ -164,7 +164,8 @@ int main() {
           printf("All connections closed, shutting down server...\n");
           return 0;
         } else {
-
+          printf("Unknown command. Type 'help' for the manual.\n> ");
+          fflush(stdout);
         }
       }
     }
