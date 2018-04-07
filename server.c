@@ -11,7 +11,8 @@
 #define MAX_CLIENT 100
 #define BUFFER_SIZE 1024
 
-int sockfd, fl, clen, clientfd, count_client = 0;
+unsigned int clen;
+int sockfd, fl, clientfd, count_client = 0;
 int child_to_parent_pipe[MAX_CLIENT][2] = {{0}};
 int parent_to_child_pipe[MAX_CLIENT][2] = {{0}};
 struct sockaddr_in saddr, caddr;
@@ -90,7 +91,8 @@ int main() {
     return 1;
   }
 
-  printf("Server created, listening for connections...\n");
+  printf("Server created, listening for connections...\n> ");
+  fflush(stdout);
 
   while(1) {
     fd_set set;
@@ -112,16 +114,15 @@ int main() {
 
     if (FD_ISSET(0, &set)) {
       char command[BUFFER_SIZE];
-      while(1) {
+      fgets(command, sizeof(command), stdin);
+      if (strlen(command) == 1) {
         printf("> ");
-        fgets(command, sizeof(command), stdin);
-        if (strlen(command) == 1) {
-          continue;
-        }
+        fflush(stdout);
+      } else {
         if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n')) {
           command[strlen (command) - 1] = '\0';
         }
-        char *cmd_copy;
+        char cmd_copy[BUFFER_SIZE];
         strcpy(cmd_copy, command);
         char *first_token = strtok(cmd_copy, " ");
         if (strcmp(first_token, "help") == 0) {
@@ -159,14 +160,15 @@ int main() {
             pipe (parent_to_child_pipe[i]);
             pipe (child_to_parent_pipe[i]);
             count_client++;
-            printf("Client %d connected (currently %d clients connected)\n", i, count_client);
+            printf("\nClient %d connected (currently %d clients connected)\n> ", i, count_client);
+            fflush(stdout);
             break;
           }
         }
         
         switch(fork()) {
           case -1:
-            printf("Cannot create process!\n");
+            printf("\nCannot create process!\n");
             return 1;
           case 0:
             close(parent_to_child_pipe[i][1]);
@@ -229,9 +231,10 @@ int main() {
         if(read(child_to_parent_pipe[i][0], message, sizeof(message)) < 0){
           return 1;
         }
-        printf("Message from Client %d: %s\n", i, message);
+        printf("\nMessage from Client %d: %s\n> ", i, message);
+        fflush(stdout);
 
-        char *msg_copy;
+        char msg_copy[BUFFER_SIZE];
         strcpy(msg_copy, message);
         char *first_token = strtok(msg_copy, " ");
         if (strcmp(first_token, "/pm") == 0) {
@@ -240,39 +243,44 @@ int main() {
           if (dest_id_str != NULL) {
             int dest_id = strtol(dest_id_str, &check, 10);
             if ((*check == '\0') && (parent_to_child_pipe[dest_id][1] > 0)) {
-              char *content, msg_with_header[BUFFER_SIZE];
+              char *content, msg_to_client[BUFFER_SIZE];
               content = strtok(NULL, "");
               if (content != NULL) {
-                sprintf(msg_with_header, "Client %d [PM]: ", i);
-                strcat(msg_with_header, content);
-                write(parent_to_child_pipe[dest_id][1], msg_with_header, sizeof(msg_with_header));
+                sprintf(msg_to_client, "Client %d [PM]: ", i);
+                strcat(msg_to_client, content);
+                write(parent_to_child_pipe[dest_id][1], msg_to_client, sizeof(msg_to_client));
               }
             } else {
-              sprintf(message, "[Server] Message didn't send. Cannot find client ");
-              strcat(message, dest_id_str);
-              write(parent_to_child_pipe[i][1], message, sizeof(message));
+              char msg_to_client[BUFFER_SIZE];
+              sprintf(msg_to_client, "[Server] Message didn't send. Cannot find client ");
+              strcat(msg_to_client, dest_id_str);
+              write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
             }
           }
         } else if(strcmp(first_token, "/quit") == 0) {
           clean_pipe(i);
           count_client--;
-          printf("Client %d disconnected (currently %d clients connected)\n", i, count_client);
+          printf("\nClient %d disconnected (currently %d clients connected)\n> ", i, count_client);
+          fflush(stdout);
         } else if (strcmp(first_token, "/id") == 0) {
-          sprintf(message, "[Server] Your ID is: %d", i);
-          write(parent_to_child_pipe[i][1], message, sizeof(message));
+          char msg_to_client[BUFFER_SIZE];
+          sprintf(msg_to_client, "[Server] Your ID is: %d", i);
+          write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
         } else if (strcmp(first_token, "/help") == 0) {
-          strcpy(message, get_help_message());
-          write(parent_to_child_pipe[i][1], message, sizeof(message));
+          char msg_to_client[BUFFER_SIZE];
+          strcpy(msg_to_client, get_help_message());
+          write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
         } else if (strcmp(first_token, "/list") == 0) {
-          get_list_message(i, message);
-          write(parent_to_child_pipe[i][1], message, sizeof(message));
+          char msg_to_client[BUFFER_SIZE];
+          get_list_message(i, msg_to_client);
+          write(parent_to_child_pipe[i][1], msg_to_client, sizeof(msg_to_client));
         } else {
-          char msg_with_header[BUFFER_SIZE];
-          sprintf(msg_with_header, "Client %d: ", i);
-          strcat(msg_with_header, message);
+          char msg_to_client[BUFFER_SIZE];
+          sprintf(msg_to_client, "Client %d: ", i);
+          strcat(msg_to_client, message);
           for (int j=0; j<MAX_CLIENT; j++) {
             if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
-              write(parent_to_child_pipe[j][1], msg_with_header, sizeof(msg_with_header));
+              write(parent_to_child_pipe[j][1], msg_to_client, sizeof(msg_to_client));
             }
           }
         }
