@@ -32,6 +32,18 @@ void clean_pipe(int client) {
   parent_to_child_pipe[client][1] = 0;
 }
 
+char* get_server_help_message() {
+  return
+  "Here are list of commands to manage the server:\n"
+  "   help                  Show this message\n"
+  "   list                  Show all connected clients\n"
+  "   pm [id] [message]     Send PM to a client\n"
+  "   broadcast [message]   Broadcast message to all connected clients\n"
+  "   dc [id]               Disconnect a client\n"
+  "   shutdown              Close all connection and shutdown server"
+  ;
+}
+
 char* get_help_message() {
   return "\n"
   "*****************************************************\n"
@@ -48,7 +60,8 @@ char* get_help_message() {
   "*   /pm [id] [message]  Send PM to a client         *\n"
   "*   /quit               Exit the program            *\n"
   "*                                                   *\n"
-  "*****************************************************\n";
+  "*****************************************************\n"
+  ;
 }
 
 void get_list_message(int called_client, char *message) {
@@ -126,7 +139,10 @@ int main() {
         strcpy(cmd_copy, command);
         char *first_token = strtok(cmd_copy, " ");
         if (strcmp(first_token, "help") == 0) {
-
+          char message[BUFFER_SIZE];
+          strcpy(message, get_server_help_message());
+          printf("%s\n> ", message);
+          fflush(stdout);
         } else if (strcmp(first_token, "list") == 0) {
 
         } else if (strcmp(first_token, "pm") == 0) {
