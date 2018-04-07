@@ -35,7 +35,7 @@ char* get_help_message() {
   return "\n"
   "*****************************************************\n"
   "*        Welcome to command-line IRC Program        *\n"
-  "*                                                   *\n"
+  "*---------------------------------------------------*\n"
   "*    You are connected to the server, just type     *\n"
   "*               your message to chat                *\n"
   "*                                                   *\n"
@@ -95,6 +95,7 @@ int main() {
   while(1) {
     fd_set set;
     FD_ZERO(&set);
+    FD_SET(0, &set);
     FD_SET(sockfd, &set);
     
     int maxfd = sockfd;
@@ -108,6 +109,38 @@ int main() {
     }
     
     select(maxfd+1, &set, NULL, NULL, NULL);
+
+    if (FD_ISSET(0, &set)) {
+      char command[BUFFER_SIZE];
+      while(1) {
+        printf("> ");
+        fgets(command, sizeof(command), stdin);
+        if (strlen(command) == 1) {
+          continue;
+        }
+        if ((strlen(command) > 0) && (command[strlen (command) - 1] == '\n')) {
+          command[strlen (command) - 1] = '\0';
+        }
+        char *cmd_copy;
+        strcpy(cmd_copy, command);
+        char *first_token = strtok(cmd_copy, " ");
+        if (strcmp(first_token, "help") == 0) {
+
+        } else if (strcmp(first_token, "list") == 0) {
+
+        } else if (strcmp(first_token, "pm") == 0) {
+
+        } else if (strcmp(first_token, "broadcast") == 0) {
+
+        } else if (strcmp(first_token, "dc") == 0) {
+
+        } else if (strcmp(first_token, "shutdown") == 0) {
+
+        } else {
+
+        }
+      }
+    }
 
     if (FD_ISSET(sockfd, &set)) {
       clen=sizeof(caddr);
