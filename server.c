@@ -40,7 +40,7 @@ char* get_server_help_message() {
   "   pm [id] [message]     Send PM to a client\n"
   "   broadcast [message]   Broadcast message to all connected clients\n"
   "   dc [id]               Disconnect a client\n"
-  "   shutdown              Close all connection and shutdown server"
+  "   shutdown              Close all connections and shutdown server"
   ;
 }
 
@@ -104,7 +104,7 @@ int main() {
     return 1;
   }
 
-  printf("Server created, listening for connections...\n> ");
+  printf("Server created, listening for connections...\n%s\n> ", get_server_help_message());
   fflush(stdout);
 
   while(1) {
@@ -139,12 +139,13 @@ int main() {
         strcpy(cmd_copy, command);
         char *first_token = strtok(cmd_copy, " ");
         if (strcmp(first_token, "help") == 0) {
-          char message[BUFFER_SIZE];
-          strcpy(message, get_server_help_message());
-          printf("%s\n> ", message);
+          printf("%s\n> ", get_server_help_message());
           fflush(stdout);
         } else if (strcmp(first_token, "list") == 0) {
-
+          char message[BUFFER_SIZE];
+          get_list_message(-1, message);
+          printf("%s\n> ", message);
+          fflush(stdout);
         } else if (strcmp(first_token, "pm") == 0) {
 
         } else if (strcmp(first_token, "broadcast") == 0) {
