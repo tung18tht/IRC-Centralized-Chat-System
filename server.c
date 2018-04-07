@@ -323,12 +323,18 @@ int main() {
           if (dest_id_str != NULL) {
             int dest_id = strtol(dest_id_str, &check, 10);
             if ((*check == '\0') && (clientfds[dest_id] > 0)) {
-              char *content, msg_to_client[BUFFER_SIZE];
-              content = strtok(NULL, "");
-              if (content != NULL) {
-                sprintf(msg_to_client, "Client %d [PM]: ", i);
-                strcat(msg_to_client, content);
+              char msg_to_client[BUFFER_SIZE];
+              if (dest_id == i) {
+                sprintf(msg_to_client, "Are you serious???");
                 write(parent_to_child_pipe[dest_id][1], msg_to_client, sizeof(msg_to_client));
+              } else {
+                char *content;
+                content = strtok(NULL, "");
+                if (content != NULL) {
+                  sprintf(msg_to_client, "Client %d [PM]: ", i);
+                  strcat(msg_to_client, content);
+                  write(parent_to_child_pipe[dest_id][1], msg_to_client, sizeof(msg_to_client));
+                }
               }
             } else {
               char msg_to_client[BUFFER_SIZE];
