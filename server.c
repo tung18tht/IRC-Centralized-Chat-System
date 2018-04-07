@@ -69,7 +69,7 @@ char* get_help_message() {
 void get_list_message(int called_client, char *message) {
   sprintf(message, "[Server] Following is the list of connected clients:");
   for (int i=0; i<MAX_CLIENT; i++) {
-    if (child_to_parent_pipe[i][0] > 0) {
+    if (clientfds[i] > 0) {
       if (called_client == i) {
         sprintf(message, "%s\n       * Client %d  <-- YOU", message, i);
       } else {
@@ -153,7 +153,20 @@ int main() {
         } else if (strcmp(first_token, "broadcast") == 0) {
 
         } else if (strcmp(first_token, "dc") == 0) {
-
+          char *check, *client_id_str;
+          client_id_str = strtok(NULL, " ");
+          if (client_id_str != NULL) {
+            int client_id = strtol(client_id_str, &check, 10);
+            if ((*check == '\0') && (clientfds[client_id] > 0)) {
+              disconnect(clientfds[client_id]);
+              clean_pipe_and_fd(client_id);
+              count_client--;
+              printf("Kicked Client %d (currently %d clients connected)\n> ", client_id, count_client);
+            } else {
+              printf("Cannot find Client %s\n> ", client_id_str);
+            }
+            fflush(stdout);
+          }
         } else if (strcmp(first_token, "shutdown") == 0) {
           for (int i = 0; i < MAX_CLIENT; i++) {
             if (clientfds[i] > 0) {
@@ -230,7 +243,6 @@ int main() {
                 if(read(clientfds[i], message, sizeof(message)) > 0) {
                   write(child_to_parent_pipe[i][1], message, sizeof(message));
                   if(strcmp(message, "/quit") == 0) {
-                    disconnect(clientfds[i]);
                     close(parent_to_child_pipe[i][0]);
                     close(child_to_parent_pipe[i][1]);
                     return 0;
@@ -238,7 +250,6 @@ int main() {
                 } else {
                   sprintf(message, "/quit");
                   write(child_to_parent_pipe[i][1], message, sizeof(message));
-                  disconnect(clientfds[i]);
                   close(parent_to_child_pipe[i][0]);
                   close(child_to_parent_pipe[i][1]);
                   return 1;
@@ -270,7 +281,7 @@ int main() {
           dest_id_str = strtok(NULL, " ");
           if (dest_id_str != NULL) {
             int dest_id = strtol(dest_id_str, &check, 10);
-            if ((*check == '\0') && (parent_to_child_pipe[dest_id][1] > 0)) {
+            if ((*check == '\0') && (clientfds[dest_id] > 0)) {
               char *content, msg_to_client[BUFFER_SIZE];
               content = strtok(NULL, "");
               if (content != NULL) {
@@ -286,6 +297,7 @@ int main() {
             }
           }
         } else if(strcmp(first_token, "/quit") == 0) {
+          disconnect(clientfds[i]);
           clean_pipe_and_fd(i);
           count_client--;
           printf("\nClient %d disconnected (currently %d clients connected)\n> ", i, count_client);
