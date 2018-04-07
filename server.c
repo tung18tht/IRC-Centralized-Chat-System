@@ -164,7 +164,24 @@ int main() {
           printf("%s\n> ", message);
           fflush(stdout);
         } else if (strcmp(first_token, "pm") == 0) {
-
+          char *check, *dest_id_str;
+          dest_id_str = strtok(NULL, " ");
+          if (dest_id_str != NULL) {
+            int dest_id = strtol(dest_id_str, &check, 10);
+            if ((*check == '\0') && (clientfds[dest_id] > 0)) {
+              char *content, msg_to_client[BUFFER_SIZE];
+              content = strtok(NULL, "");
+              if (content != NULL) {
+                sprintf(msg_to_client, "[Server] ");
+                strcat(msg_to_client, content);
+                write(parent_to_child_pipe[dest_id][1], msg_to_client, sizeof(msg_to_client));
+              }
+            } else {
+              printf("Message didn't send. Cannot find Client %s\n", dest_id_str);
+            }
+          }
+          printf("> ");
+          fflush(stdout);
         } else if (strcmp(first_token, "broadcast") == 0) {
           char *message;
           message = strtok(NULL, "");
@@ -182,15 +199,13 @@ int main() {
               disconnect(clientfds[client_id]);
               clean_pipe_and_fd(client_id);
               count_client--;
-              printf("Kicked Client %d (currently %d clients connected)\n> ", client_id, count_client);
+              printf("Kicked Client %d (currently %d clients connected)\n", client_id, count_client);
             } else {
-              printf("Cannot find Client %s\n> ", client_id_str);
+              printf("Cannot find Client %s\n", client_id_str);
             }
-            fflush(stdout);
-          } else {
-            printf("> ");
-            fflush(stdout);
           }
+          printf("> ");
+          fflush(stdout);
         } else if (strcmp(first_token, "shutdown") == 0) {
           broadcast("Server is shutting down in 3...2...1...");
           sleep(3);
