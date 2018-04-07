@@ -15,6 +15,7 @@ unsigned int clen;
 int sockfd, fl, clientfd, count_client = 0;
 int child_to_parent_pipe[MAX_CLIENT][2] = {{0}};
 int parent_to_child_pipe[MAX_CLIENT][2] = {{0}};
+int clientfds[MAX_CLIENT] = {0};
 struct sockaddr_in saddr, caddr;
 unsigned short port = 8784;
 
@@ -30,6 +31,7 @@ void clean_pipe(int client) {
   child_to_parent_pipe[client][1] = 0;
   parent_to_child_pipe[client][0] = 0;
   parent_to_child_pipe[client][1] = 0;
+  clientfds[client] = 0;
 }
 
 char* get_server_help_message() {
@@ -115,7 +117,7 @@ int main() {
     
     int maxfd = sockfd;
     for(int i=0; i<MAX_CLIENT; i++) {
-      if (child_to_parent_pipe[i][0] > 0) {
+      if (clientfds[i] > 0) {
         FD_SET(child_to_parent_pipe[i][0], &set);
         if (child_to_parent_pipe[i][0] > maxfd) {
           maxfd = child_to_parent_pipe[i][0];
@@ -173,7 +175,8 @@ int main() {
       } else {  
         int i;
         for (i = 0; i < MAX_CLIENT; i++) {
-          if ((parent_to_child_pipe[i][0] == 0) && (parent_to_child_pipe[i][1] == 0) && (child_to_parent_pipe[i][0] == 0) && (child_to_parent_pipe[i][1] == 0)){
+          if (clientfds[i] == 0){
+            clientfds[i] = clientfd;
             pipe (parent_to_child_pipe[i]);
             pipe (child_to_parent_pipe[i]);
             count_client++;
@@ -193,33 +196,33 @@ int main() {
             
             char message[BUFFER_SIZE];
             strcpy(message, get_help_message());
-            write(clientfd, message, sizeof(message));
+            write(clientfds[i], message, sizeof(message));
 
             while(1) {
               fd_set set;
               FD_ZERO(&set);
               FD_SET(parent_to_child_pipe[i][0], &set);
-              FD_SET(clientfd, &set);
+              FD_SET(clientfds[i], &set);
               
-              int maxfd = clientfd > parent_to_child_pipe[i][0] ? clientfd : parent_to_child_pipe[i][0];
+              int maxfd = clientfds[i] > parent_to_child_pipe[i][0] ? clientfds[i] : parent_to_child_pipe[i][0];
               
               select(maxfd + 1, &set, NULL, NULL, NULL);
               
               if (FD_ISSET(parent_to_child_pipe[i][0], &set)) {
                 char message[BUFFER_SIZE];
                 if(read(parent_to_child_pipe[i][0], message, sizeof(message)) > 0) {
-                  write(clientfd, message, sizeof(message));
+                  write(clientfds[i], message, sizeof(message));
                 } else {
                   return 1;
                 }
               }
               
-              if(FD_ISSET(clientfd, &set)){
+              if(FD_ISSET(clientfds[i], &set)){
                 char message[BUFFER_SIZE];
-                if(read(clientfd, message, sizeof(message)) > 0) {
+                if(read(clientfds[i], message, sizeof(message)) > 0) {
                   write(child_to_parent_pipe[i][1], message, sizeof(message));
                   if(strcmp(message, "/quit") == 0) {
-                    disconnect(clientfd);
+                    disconnect(clientfds[i]);
                     close(parent_to_child_pipe[i][0]);
                     close(child_to_parent_pipe[i][1]);
                     return 0;
@@ -227,7 +230,7 @@ int main() {
                 } else {
                   sprintf(message, "/quit");
                   write(child_to_parent_pipe[i][1], message, sizeof(message));
-                  disconnect(clientfd);
+                  disconnect(clientfds[i]);
                   close(parent_to_child_pipe[i][0]);
                   close(child_to_parent_pipe[i][1]);
                   return 1;
@@ -243,7 +246,7 @@ int main() {
     }
     
     for (int i=0; i<MAX_CLIENT; i++) {
-      if (child_to_parent_pipe[i][0] > 0 && FD_ISSET(child_to_parent_pipe[i][0], &set)) {
+      if (clientfds[i] > 0 && FD_ISSET(child_to_parent_pipe[i][0], &set)) {
         char message[BUFFER_SIZE];
         if(read(child_to_parent_pipe[i][0], message, sizeof(message)) < 0){
           return 1;
@@ -296,7 +299,7 @@ int main() {
           sprintf(msg_to_client, "Client %d: ", i);
           strcat(msg_to_client, message);
           for (int j=0; j<MAX_CLIENT; j++) {
-            if ((parent_to_child_pipe[j][1] > 0) && (j != i)) {
+            if ((clientfds[j] > 0) && (j != i)) {
               write(parent_to_child_pipe[j][1], msg_to_client, sizeof(msg_to_client));
             }
           }
