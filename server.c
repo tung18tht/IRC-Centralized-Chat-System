@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 #define MAX_CLIENT 100
 #define BUFFER_SIZE 1024
@@ -210,6 +211,13 @@ int main() {
         } else if (strcmp(message, "/list") == 0) {
           get_list_message(i, message);
           write(parent_to_child_pipe[i][1], message, sizeof(message));
+        } else if (strcmp(strtok(message, " "), "/pm") == 0) {
+          char *content, msg_with_header[BUFFER_SIZE];
+          int dest_id = atoi(strtok(NULL, " "));
+          sprintf(msg_with_header, "Client %d [PM]: ", dest_id);
+          content = strtok(NULL, "");
+          strcat(msg_with_header, content);
+          write(parent_to_child_pipe[dest_id][1], msg_with_header, sizeof(msg_with_header));
         } else {
           char msg_with_header[BUFFER_SIZE];
           sprintf(msg_with_header, "Client %d: ", i);
