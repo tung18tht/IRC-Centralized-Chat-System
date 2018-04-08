@@ -68,7 +68,7 @@ The server will listen on a specific port for new connection. For each connectio
 
 \subsection{Main process}
 
-When the server start, it will try to create a socket and listen for connections. The main process have an fdset including \textbf{STDIN}, \textbf{sockfd} (socket file descriptor), and\\\textbf{child\_to\_parent\_pipe[0]}(s)
+When the server start, it will try to create a socket and listen for connections. The main process have an \textbf{fdset} including \textbf{STDIN}, \textbf{sockfd} (socket file descriptor), and\\\textbf{child\_to\_parent\_pipe[0]}(s)
 
 \begin{enumerate}
 \item \textbf{STDIN}: The \textbf{STDIN} reads commands from the administrator, and process it. Details about the commands will be discussed later.
@@ -78,13 +78,15 @@ When the server start, it will try to create a socket and listen for connections
 \item \textbf{child\_to\_parent\_pipe[0]}(s): These \textbf{pipes} signaled when there are messages from the child process (fundamentally from the client). The server will process the message. If it is a command, the command will be executed and response back the results to clients through \textbf{parent\_to\_child\_pipe[1]}(s). If it is a normal message, server will broadcast it to all connected clients (thorugh \textbf{pipes} with child process).
 \end{enumerate}
 
-% \subsection{Child processes}
+\subsection{Child processes}
 
-% have an fdset for parent_to_child_pipe, its clientfd
+Each child process also have a have an \textbf{fdset} including \textbf{parent\_to\_child\_pipe[1]}(s), and its \textbf{clientfd} (client file descriptor returned by \textit{accept()})
 
-% parent_to_child_pipe: send to client
+\begin{enumerate}
+\item \textbf{parent\_to\_child\_pipe[1]}(s): Signaled when there are messages from server to clients, just forward the message to its in-charged client.
 
-% clientfd: send to server main process
+\item \textbf{clientfd}: Signaled when trere are messages from the managing client. Simply send the messages to the server main process to handle.
+\end{enumerate}
 
 % \subsection{Client command}
 
