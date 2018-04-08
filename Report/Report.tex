@@ -42,14 +42,14 @@ The pseudo design is as follows:
 
 \subsection{Input handling thread}
 
-The input handling thread continously getting message input from keyboard by user. The message runs through some processing such as remove `\textbackslash n' at the end, \dots After processed, message is sent to the pipe to be read by the network thread.
+The input handling thread continuously getting message input from keyboard by user. The message runs through some processing such as remove `\textbackslash n' at the end, \dots After processed, message is sent to the pipe to be read by the network thread.
 
 \subsection{Network handling thread}
 
-The network handling thread have a \textbf{fdset} for multiplexed connection. The set include two file descriptors:
+The network handling thread have a \textbf{fdset} for multiplexed connection. The set includes two file descriptors:
 
 \begin{itemize}
-\item \textbf{pipe[0]}: The read-end of the pipe between input thread and this thread. It is signaled when there are messages from the input thread. If the messages are successfully received, it will be send to the server.
+\item \textbf{pipe[0]}: The read-end of the pipe between input thread and this thread. It is signaled when there are messages from the input thread. If the messages are successfully received, it will be sent to the server.
 
 \item \textbf{sockfd}: The socket file descriptor, it is signaled when there are messages from the server or when the connection is closed. If there are messages, it will be printed to the terminal. Otherwise, the program will stop.
 \end{itemize}
@@ -75,7 +75,7 @@ When the server start, it will try to create a socket and listen for connections
 
 \item \textbf{sockfd}: Signaled when there are clients want to connect, it will accept if possible. After that, pipes will be setup and the server create a child process to handle it.
 
-\item \textbf{child\_to\_parent\_pipe[0]}(s): These \textbf{pipes} signaled when there are messages from the child process (fundamentally from the client). The server will process the message. If it is a command, the command will be executed and response back the results to clients through \textbf{parent\_to\_child\_pipe[1]}(s). If it is a normal message, server will broadcast it to all connected clients (thorugh \textbf{pipes} with child process).
+\item \textbf{child\_to\_parent\_pipe[0]}(s): These \textbf{pipes} signaled when there are messages from the child process (fundamentally from the client). The server will process the message. If it is a command, the command will be executed and response back the results to clients through \textbf{parent\_to\_child\_pipe[1]}(s). If it is a normal message, server will broadcast it to all connected clients (through \textbf{pipes} with child process).
 \end{itemize}
 
 \subsection{Child processes}
@@ -85,7 +85,7 @@ Each child process also have a have an \textbf{fdset} including \textbf{parent\_
 \begin{itemize}
 \item \textbf{parent\_to\_child\_pipe[1]}: Signaled when there are messages from server to clients, just forward the message to its in-charged client.
 
-\item \textbf{clientfd}: Signaled when trere are messages from the managing client. Simply send the messages to the server main process to handle.
+\item \textbf{clientfd}: Signaled when there are messages from the managing client. Simply send the messages to the server main process to handle.
 \end{itemize}
 
 \subsection{Client commands}
