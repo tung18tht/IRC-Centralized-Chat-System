@@ -67,10 +67,39 @@ The server will listen on a specific port for new connection. For each connectio
 
 \subsection{Main process}
 
+When the server start, it will try to create a socket and listen for connections.
+
+have an fdset for 0, sockfd, child_to_parent_pipe
+
+0: handle server command
+
+sockfd: new connections, fork
+
+pipe: handle client command, response back to client, otherwise broadcast
+
 \subsection{Child processes}
+
+have an fdset for parent_to_child_pipe, its clientfd
+
+parent_to_child_pipe: send to client
+
+clientfd: send to server main process
 
 \subsection{Client command}
 
+/help
+/id
+/list
+/pm [id] [message]
+/quit
+
 \subsection{Server command}
+
+help
+list
+pm [id] [message]
+broadcast [message]
+dc [id]
+shutdown
 
 \end{document}
