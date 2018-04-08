@@ -2,6 +2,7 @@
 
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{graphicx}
+\usepackage{float}
 
 \setlength\parindent{0pt}
 \setlength\parskip{1em}
@@ -27,12 +28,23 @@ The client firstly takes server hostname from STDIN or from arguments, and then 
 
 The pseudo design is as follows:
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{client_diagram.png}
 \caption{Client's thread diagram}
 \end{figure}
 
 \subsection{Input handling thread}
+
+The input handling thread continously getting message input from keyboard by user. The message runs through some processing such as remove `\textbackslash n' at the end, \ldots After processed, message is sent to the pipe to be read by the network thread.
+
+\subsection{Network handling thread}
+
+The network handling thread have a \textbf{fdset} for multiplexed connection. The set include two file descriptors:
+
+\begin{enumerate}
+\item \textbf{pipe[0]}: The read-end of the pipe between input thread and this thread. It is signaled when there are messages from the input thread. If the messages are successfully received, it will be send to the server.
+\item \textbf{sockfd}: The socket file descriptor, it is signaled when there are messages from the server or when the connection is closed. If there are messages, it will be printed to the terminal. Otherwise, the program will stop.
+\end{enumerate}
 
 \end{document}
